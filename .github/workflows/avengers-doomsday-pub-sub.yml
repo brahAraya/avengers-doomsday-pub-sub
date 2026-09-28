@@ -1,0 +1,58 @@
+name: Avengers Doomsday Pub Sub
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  poll-cinemark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Sondeo continuo hacia API Cinemark
+        id: polling
+        run: |
+          echo "Iniciando monitoreo de preventa..."
+          
+          for i in {1..350}; do
+            RAW_RESPONSE=$(curl -s "https://bff.cinemark.cl/api/cinema/movies/slug/avengers-doomsday" \
+              -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+              -H "Accept: application/json" \
+              -H "Referer: https://www.cinemark.cl/pelicula/avengers-doomsday" \
+              -H "Origin: https://www.cinemark.cl")
+
+            STATUS=$(echo "$RAW_RESPONSE" | grep -o '"status":"[^"]*"' | head -n1 | cut -d'"' -f4)
+
+            echo "[$(date +'%T')] Intento $i/350 | Status: $STATUS"
+
+            # Criterio de activación: distinto a COMING_SOON y no vacío
+            if [ "$STATUS" != "COMING_SOON" ] && [ -n "$STATUS" ]; then
+              echo "¡PREVENTA DETECTADA! Enviando notificación crítica a ntfy..."
+              
+              curl -H "Title: 🚨 CINEMARK: PREVENTA AVENGERS ACTIVA" \
+                   -H "Priority: urgent" \
+                   -H "Tags: rotating_light,ticket" \
+                   -H "Click: https://www.cinemark.cl/pelicula/avengers-doomsday" \
+                   -d "¡Status: $STATUS! Entra ya a comprar tus entradas." \
+                   https://ntfy.sh/avengers_doomsday_cinemark
+
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            sleep 60
+          done
+
+      - name: Relanzar workflow para el siguiente ciclo
+        if: steps.polling.outputs.found != 'true'
+        run: |
+          echo "Ciclo de 350 intentos completado sin cambios. Reencadenando el workflow..."
+          gh workflow run monitor.yml --ref "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
