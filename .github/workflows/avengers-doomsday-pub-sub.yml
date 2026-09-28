@@ -20,7 +20,7 @@ jobs:
         run: |
           echo "Iniciando monitoreo de preventa..."
           
-          for i in {1..350}; do
+          for i in {1..2}; do
             RAW_RESPONSE=$(curl -s "https://bff.cinemark.cl/api/cinema/movies/slug/avengers-doomsday" \
               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
               -H "Accept: application/json" \
