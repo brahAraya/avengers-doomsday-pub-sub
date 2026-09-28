@@ -53,6 +53,6 @@ jobs:
         if: steps.polling.outputs.found != 'true'
         run: |
           echo "Ciclo de 350 intentos completado sin cambios. Reencadenando el workflow..."
-          gh workflow run monitor.yml --ref "${{ github.ref_name }}"
+          gh workflow run avengers-doomsday-pub-sub.yml --ref "${{ github.ref_name }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
